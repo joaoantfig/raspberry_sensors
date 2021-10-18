@@ -3,12 +3,17 @@ import spidev
 import time
 import RPi.GPIO as GPIO
 
+import csv
+import random
+
 GPIO.setmode(GPIO.BCM)
 
 #Open SPI bus
 spi = spidev.SpiDev()
 spi.open(0,0)
 spi.max_speed_hz=1000000
+
+
 
 #define custom chip select
 #this is done so we can use dozens of SPI devices on 1 bus
@@ -34,14 +39,49 @@ def ConvertToVoltage(value, bitdepth, vref):
   return vref*(value/(2**bitdepth-1))
 
 # Define delay between readings
-delay = 0.1
+delay = 0.005
+
+x_value = 0
+voltage_1 = 0
+voltage_2 = 0
+
+fieldnames = ["x_value", "voltage_1", "voltage_2", "voltage_3"]
+
+with open('data.csv', 'w') as csv_file:
+    csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+    csv_writer.writeheader()
  
 while True:
-  GPIO.output(CS_ADC, GPIO.LOW)
-  value = ReadChannel3208(3)
-  GPIO.output(CS_ADC, GPIO.HIGH)
-  voltage = ConvertToVoltage(value, 12, 3.3) #for MCP3208 at 3.3V
-  #print(value)
-  print(f"{voltage:.3f}")
-  # Wait before repeating loop
-  time.sleep(delay)
+
+    GPIO.output(CS_ADC, GPIO.LOW)
+    value1 = ReadChannel3208(3)
+    value2 = ReadChannel3208(4)
+    value3 = ReadChannel3208(5)
+    GPIO.output(CS_ADC, GPIO.HIGH)
+    voltage1 = ConvertToVoltage(value1, 12, 3.3) #for MCP3208 at 3.3V
+    voltage2 = ConvertToVoltage(value2, 12, 3.3) #for MCP3208 at 3.3V
+    voltage3 = ConvertToVoltage(value3, 12, 3.3) #for MCP3208 at 3.3V
+    #print(value)
+    #print(f"{voltage:.3f}")
+    # Wait before repeating loop
+  
+    with open('data.csv', 'a') as csv_file:
+            csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)                    
+                        
+            voltage_1 = f"{voltage1:.3f}" #total_1 + random.randint(-6, 8)
+            voltage_2 = f"{voltage2:.3f}" #total_2 + random.randint(-5, 6)
+            voltage_3 = f"{voltage3:.3f}" #total_2 + random.randint(-5, 6) 
+            x_value += 1
+            
+            info = {
+                "x_value": x_value,
+                "voltage_1": voltage_1,
+                "voltage_2": voltage_2,
+                "voltage_3": voltage_3
+            }
+            csv_writer.writerow(info)
+            print(x_value, voltage_1, voltage_2, voltage_3)
+      
+    time.sleep(delay)
+
+
